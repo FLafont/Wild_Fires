@@ -1,5 +1,6 @@
-library(dplyr)
+library(tidyverse)
 library(sf)
+install.packages("tidymodels")
 
 
 df_train  <- read_csv("data/data_train.csv")
@@ -64,6 +65,7 @@ table_classif_wide <- table_classif %>%
   pivot_wider(names_from = saison,
               values_from = c(A:total_nb_fire))
 
+write_csv(table_classif,"data/table_classif_long.csv")
 
 # 
 # 
