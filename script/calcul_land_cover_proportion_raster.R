@@ -1,11 +1,12 @@
-#library(rgdal)
+library(rgdal)
 library(dplyr)
 library(raster)
 library(sf)
 library(purrr)
 library(writexl)
+library(readxl)
 # RASTER NLCD USA 
-Cont_USA <- raster("data/NLCD_2016_Land_Cover_L48_20190424/NLCD_2016_Land_Cover_L48_20190424.img")
+Cont_USA <- raster("data/NLCD_2011_Land_Cover_L48_20190424/NLCD_2011_Land_Cover_L48_20190424.img")
 
 # Shapefiles counties 2011
 # counties<- st_read('data/county_shp/tl_2011_us_county/tl_2011_us_county.shp')
@@ -21,16 +22,16 @@ liste_counties <- read_xlsx("data/liste_counties_selectionnes.xlsx") %>%
                      paste0("0",fips),
                      fips))
 
-counties<- readOGR('data/county_shp/tl_2011_us_county/tl_2011_us_county.shp')
-counties_selec <- subset(counties,counties$GEOID %in%liste_counties$fips )
-counties_selec <- spTransform(counties_selec, proj4string(Cont_USA))
-
-#counties_selec <- counties %>%dplyr::filter(GEOID %in% liste_counties$fips)
-  
-plot(Cont_USA)
-plot_usa_counties_selec <- plot(counties_selec,add=TRUE)
-
-ggsave(plot = plot_usa_counties_selec,filename="plots/raster_USA_avec_counties_selectionnes.png",dpi = 600)
+# counties<- readOGR('data/county_shp/tl_2011_us_county/tl_2011_us_county.shp')
+# counties_selec <- subset(counties,counties$GEOID %in%liste_counties$fips )
+# counties_selec <- spTransform(counties_selec, proj4string(Cont_USA))
+# 
+# #counties_selec <- counties %>%dplyr::filter(GEOID %in% liste_counties$fips)
+#   
+# plot(Cont_USA)
+# plot_usa_counties_selec <- plot(counties_selec,add=TRUE)
+# 
+# ggsave(plot = plot_usa_counties_selec,filename="plots/raster_USA_avec_counties_selectionnes.png",dpi = 600)
 
 
 counties<- st_read('data/county_shp/tl_2011_us_county/tl_2011_us_county.shp')
@@ -44,14 +45,15 @@ list_counties <-  counties_selec %>%
 e <- purrr::map(list_counties, ~extent(.x))
 
 ### CROP AVEC UN COUNTY POUR TESTER 
+# Image pour slides
 # COUNTY 1: 
 # A/ CROP
-crop1 <- crop(Cont_USA,e[[1]])
-plot(crop1)
-
-# B/ MASK LA PARTIE INUTILE
-crop1_2 <- mask(crop1,list_counties[[1]])
-plot(crop1_2)
+# crop1 <- crop(Cont_USA,e[[1]])
+# plot(crop1)
+# 
+# # B/ MASK LA PARTIE INUTILE
+# crop1_2 <- mask(crop1,list_counties[[1]])
+# plot(crop1_2)
 
 
 ### Meme chose sur l'ensemble des counties 
@@ -96,7 +98,8 @@ df_lc <- map2(list_lc,list_counties,~.x %>%
 df_lc <- bind_rows(df_lc)
 
 ## Export 
-write_xlsx(df_lc,"data/landcover_repartition_by_count_nlcd_2016.xlsx")
+write_xlsx(df_lc,"data/landcover_repartition_by_count_nlcd_2011.xlsx")
+#write_xlsx(df_lc,"data/landcover_repartition_by_count_nlcd_2016.xlsx")
 
 # calcul_lc <- function(crop){
 #   # prend un raster croppé comme argument
