@@ -1,6 +1,7 @@
 library(data.table)
 library(tidyverse)
-
+library(readxl)
+library(writexl)
 ##cr?ation table train
 #table train : toutes les semaines de 2000 ? 2011 avec date de d?but de la semaine et num?ros 
 #(pour donn?es m?t?o et merger avec donn?es de feux)
@@ -11,12 +12,20 @@ donnees_train$annee<-format(donnees_train$date_semaine, format = "%Y")
 donnees_train$semaine<-data.table::week(donnees_train$date_semaine)
 donnees_train$county<-NA
 
+liste_counties_selectionnes <- read_xlsx("data/liste_counties_selectionnes.xlsx") 
 counties<-unique(liste_counties_selectionnes$fips)
 counties<-ifelse(nchar(counties)==4,paste0("0",counties),counties)
 
+# df_test<-tibble(county = counties) %>%
+#   group_by(county)%>%
+#   mutate(annee = format(donnees_train$date_semaine, format = "%Y"))
+# 
 # df_test<-donnees_train%>%
-#   pivot_wider(names_from=date_semaine,
-#               values_from=date_semaine)%>%
+#   select(-date_semaine)%>%
+#   pivot_wider(names_from=semaine,
+#               values_from=semaine)%>%
+#   filter(annee=="2010")
+# df_test%>%
 #   mutate(county=counties)%>%
 #   pivot_longer(cols=-county,names_to = "semaine",values_to = "semaine")
 
@@ -30,7 +39,7 @@ n<-nb_semaines*length(counties)
 donnees_train2<-donnees_train
 i<-nrow(donnees_train2)
 i
-
+start <- Sys.time()
 while (i < n) {
   donnees_train2<-rbind.data.frame(donnees_train2,donnees_train)
   i<-nrow(donnees_train2)
@@ -41,11 +50,13 @@ for (i in 1:length(counties)){
 }
 
 donnees_train2<-donnees_train2[-(n+1),]
-
+Sys.time()-start
 #ajout des données de feux :
 #nombre de feux et superficie brul?e, et nombre de feux par cause.
-
-summary(counties_selectionnes)
+counties_selectionnes <- read_xlsx("data/counties_selectionnes.xlsx")%>%
+  mutate(fips = ifelse(nchar(fips)>4,fips,paste0("0",fips)),
+         FIRE_YEAR = as.character(FIRE_YEAR))
+#summary(counties_selectionnes)
 
 info_fires<-counties_selectionnes%>%
   group_by(FIRE_YEAR,discov_week,fips)%>%
@@ -58,7 +69,8 @@ info_fires2<-counties_selectionnes%>%
   pivot_wider(names_from = STAT_CAUSE_DESCR,
               values_from = nb)
 
-donnees_train2$annee=as.numeric(donnees_train2$annee)
+
+
 
 
 don_train<-left_join(donnees_train2,info_fires, by =c("annee"="FIRE_YEAR",
@@ -75,6 +87,6 @@ don_train<-don_train%>%
   mutate(FIRE=ifelse(nb==0,FALSE,TRUE))
 
 ##on sauvegarde
-write.csv(don_test,"data/don_train.csv")
 
+write_xlsx(don_train,"data/don_train.xlsx")
 

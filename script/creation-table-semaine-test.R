@@ -7,7 +7,7 @@ df_test  <- read_csv("data/data_test.csv")
 df_test$COUNTY <-as_factor(df_test$COUNTY)
 
 ##Création de la table counties_match_test avec les donnees test (l'autre n'était faite qu'avec les données de 2000 à 2010)
-##### TROUVER LES COUNTRIES PAR CORRESPONDANCE GEO ###
+##### TROUVER LES COUNTIES PAR CORRESPONDANCE GEO ###
 # On transforme les données en objet SF, avec le bon CRS WGS84 (4326)
 
 sf_test <- st_as_sf(df_test, coords = c("LONGITUDE","LATITUDE"))
@@ -40,25 +40,30 @@ df_test <- counties_match_test %>%
 
 #à partir des counties selectionnés grâce aux données test, on créé la table counties_selec_test
 #(attention, il nous faut la table presence_complete du script "selections_des_counties_frequence_feu.R" pour avoir les même counties dans test et train)
+#hasc_selec <- counties_selectionnes$HASC_2
 
+
+# counties_selec_test <- df_test %>%
+#   filter(HASC_2 %in% presence_complete$HASC_2,
+#          NAME_1 !="Alaska") %>%
+#   mutate(NAME_2 = str_replace(NAME_2,"Saint","St"),
+#          NAME_2 = case_when(
+#            NAME_2=="McKinley"~"Mckinley",
+#            NAME_2=="McKenzie"~"Mckenzie",
+#            NAME_2=="Desoto"~"De Soto",
+#            NAME_2=="Lake of the Woods"~"Lake of The Woods",
+#            TRUE~NAME_2
+#          ))
 counties_selec_test <- df_test %>%
-  filter(HASC_2 %in% presence_complete$HASC_2,
-         NAME_1 !="Alaska") %>%
-  mutate(NAME_2 = str_replace(NAME_2,"Saint","St"),
-         NAME_2 = case_when(
-           NAME_2=="McKinley"~"Mckinley",
-           NAME_2=="McKenzie"~"Mckenzie",
-           NAME_2=="Desoto"~"De Soto",
-           NAME_2=="Lake of the Woods"~"Lake of The Woods",
-           TRUE~NAME_2
-         ))
+  filter(HASC_2 %in% hasc_selec)
 
 ## fiPs CODE 
 library(rnoaa)
 
 fips <- fipscodes 
-counties_selectionnes_test <- inner_join(counties_selec_test,fips, by =c("NAME_1"="state",
-                                                               "NAME_2"="county"))
+counties_selectionnes_test <- inner_join(counties_selec_test,
+                                         fips, by =c("NAME_1"="state",
+                                                     "NAME_2"="county"))
 
 #on prend le même vecteur "counties" que pour la matrice semaine_test
 
@@ -95,8 +100,9 @@ donnees_test2<-donnees_test2[-(n+1),]
 #ajout des données de feux à test:
 #nombre de feux et superficie brulée, et nombre de feux par cause.
 
-summary(counties_selectionnes_test)
+#summary(counties_selectionnes_test)
 
+counties_selectionnes_test$FIRE_YEAR <- as.character(counties_selectionnes_test$FIRE_YEAR )
 info_fires<-counties_selectionnes_test%>%
   group_by(FIRE_YEAR,discov_week,fips)%>%
   summarise(nb=n(),
@@ -108,8 +114,7 @@ info_fires2<-counties_selectionnes_test%>%
   pivot_wider(names_from = STAT_CAUSE_DESCR,
               values_from = nb)
 
-donnees_test2$annee=as.numeric(donnees_test2$annee)
-
+#donnees_test2$annee=as.numeric(donnees_test2$annee)
 
 don_test<-left_join(donnees_test2,info_fires, by =c("annee"="FIRE_YEAR",
                                                       "semaine"="discov_week",
@@ -122,10 +127,26 @@ don_test[is.na(don_test)]<-0
 summary(don_test)
 
 don_test<-don_test%>%
-  mutate(FIRE=ifelse(nb==0,FALSE,TRUE))
+  mutate(FIRE=ifelse(nb==0,FALSE,TRUE),
+         county= ifelse(nchar(county)>4,county,paste0("0",county))) %>%
+  group_by(county)
 
+# Add HASC2 and area by county
+# Reste que 846? Pas sûr de pourquoi. 
+hasc_fips <- counties_selectionnes_test %>%
+  select(HASC_2,county=fips)%>%
+  unique()
+don_testf <- inner_join(hasc_fips,don_test) 
+
+don_testf <- inner_join(don_testf,
+                        tibble(usa_counties)%>%
+                          select(NAME_1,county_size,HASC_2))
 ###sauver la table don_test
-write.csv(don_test,"data/don_test.csv")
+write_xlsx(don_testf,"data/don_test.xlsx")
+#write.csv(don_test,"data/don_test.csv")
+
+
+
 
 
 
