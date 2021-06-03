@@ -1,0 +1,2061 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+General goal: this script will parse over 20 million lines of weather data stored locally on Carey's computer. Output aims at aggregating historical weather data for target dates for target county centroids 
+
+
+Manage packages
+```{r}
+pacman::p_load(tidyverse)
+```
+
+Get a list of target dates.
+```{r}
+date_target <- seq.Date(as.Date("2000-01-01"),
+                         as.Date("2010-12-31"),
+                         b = "week")
+
+week <- seq(1:length(date_target))
+weekz <- data.frame(week, date_target) 
+
+rm(week)
+```
+
+Get a list of counties with their identifies.
+```{r}
+
+working_d <- getwd()
+working_d <- str_sub(working_d, end = -7)
+yuio <- paste0(working_d, "data/liste_counties_selectionnes.csv")
+
+dfc <- read.csv(yuio)                        ##use the geoid in this to reference counties
+
+
+
+#dfc <- dfc[-api_failures,]
+
+first_bit <- dfc$fips_state
+first_bit <-ifelse(nchar(dfc$fips_state)==1,paste0("0",first_bit),first_bit)
+second_bit <- dfc$fips_county
+second_bit <- ifelse(nchar(dfc$fips_county)==2, paste0("0", second_bit), second_bit)
+second_bit <- ifelse(nchar(dfc$fips_county)==1, paste0("00", second_bit), second_bit)
+
+gidz <- paste0(first_bit, second_bit)
+
+#remove counties with API failures
+api_failures <- c(278, 379, 383, 572, 1024, 1853, 2923)
+dftemp <- read_rds(file = "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/counties_shp2.rds")
+dftemp <- dftemp[api_failures,]
+bad <- dftemp$GEOID
+
+qsdf <- function(x){
+  x %in% bad
+}
+
+keep <- !sapply(gidz, qsdf)
+gidz <- gidz[keep]
+bad
+
+```
+
+Initiate a dataframe by aggregating a first county.
+```{r}
+weather_dir <- "C:/Users/Carey Suehs/Documents/weather/"
+
+i <- 1
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+```
+
+Create a loop to parse the weather data in the first county and bind it to the aggregated data.
+```{r}
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+```
+
+
+Create a loop to open each of the data files for the first 50 counties and bind aggregations.
+```{r}
+for (i in 2:50){
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+```
+
+
+```{r}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_1_50.csv")
+```
+
+
+###222222222222222222222222222222222222222222222
+
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 51  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 52:100){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+```
+
+
+```{r}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_51_100.csv")
+```
+
+
+###333333333333333333333333333333333333333333
+
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 101  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 102:150){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+```
+
+```{r}
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_101_150.csv")
+```
+
+###44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444
+
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 151  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 152:200){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+```
+
+```{r}
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_151_200.csv")
+```
+
+###555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555()
+
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 201  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 202:250){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_201_250.csv")
+```
+
+###666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
+
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 251  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 252:300){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_251_300.csv")
+```
+
+
+###777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777
+
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 301  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 302:350){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_301_350.csv")
+```
+
+
+###88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 351  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 352:400){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_351_400.csv")
+```
+
+###99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 401  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 402:450){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_401_450.csv")
+```
+
+###10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10_10
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 451  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 452:500){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_451_500.csv")
+```
+
+###11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11_11
+Initiate a dataframe by aggregating a first county.
+```{r}
+
+i <- 501  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 502:550){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_501_550.csv")
+```
+
+###12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12_12
+```{r}
+i <- 551  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 552:600){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_551_600.csv")
+```
+
+###13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13_13
+```{r}
+i <- 601  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 602:650){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_601_650.csv")
+```
+
+###14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14_14
+```{r}
+i <- 651  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 652:700){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_651_700.csv")
+```
+
+###_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15_15
+```{r}
+i <- 701  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 702:750){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_701_750.csv")
+```
+
+###_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16
+```{r}
+i <- 751  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 752:800){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_751_800.csv")
+```
+
+###_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17_17
+```{r}
+i <- 801  ####################################################################################
+gid <- gidz[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+colnames(aggregated_weather) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather$week <- weekz$week[j]
+aggregated_weather$date_target <- weekz$date_target[j]
+aggregated_weather$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather <- rbind(aggregated_weather, new_row)
+}
+
+for (i in 802:853){    ##############################################################################
+  gid <- gidz[i]
+  name_of_file <- paste0("GEOID_", gid, ".csv")
+  name_of_path <- paste0(weather_dir, name_of_file)
+
+  df <- read.csv(name_of_path)
+  df$Date.time <- as.character(df$Date.time)
+  df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+  
+  for (j in 4:length(weekz$week)){
+    tdate <- weekz$date_target[j]
+    start_date <- tdate-21
+    date_range <- seq.Date(start_date, tdate, b = "day")
+
+    temp <- df[df$Date.time %in% date_range,]
+
+    new_row <- temp %>% 
+    summarise(av_temp_hi = mean(Maximum.Temperature, na.rm = T),
+            av_temp_lo <- mean(Minimum.Temperature, na.rm = T),
+            av_temp_mean <- mean(Temperature, na.rm = T),
+            av_precip <- mean(Precipitation, na.rm = T),
+            av_wind_speed <- mean(Wind.Speed, na.rm = T),
+            av_cloud_cover <- mean(Cloud.Cover, na.rm = T),
+            av_humidity <- mean(Relative.Humidity, na.rm = T))
+
+    colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+    new_row$week <- weekz$week[j]
+    new_row$date_target <- weekz$date_target[j]
+    new_row$geoid <- gid
+    aggregated_weather <- rbind(aggregated_weather, new_row)
+    
+  }
+  print(i)
+}
+
+write.csv(aggregated_weather, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/testset_aggregated_weather_801_853.csv")
+```
+
+
+
+
+
+
+
+
