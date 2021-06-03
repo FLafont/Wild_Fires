@@ -1,0 +1,125 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+General goal: this script will parse over 20 million lines of weather data stored locally on Carey's computer. Output aims at aggregating historical weather data for target dates for target county centroids 
+
+
+Manage packages
+```{r}
+pacman::p_load(tidyverse)
+```
+
+Get a list of target dates.
+```{r}
+date_target <- seq.Date(as.Date("2000-01-01"),
+                         as.Date("2010-12-31"),
+                         b = "week")
+
+week <- seq(1:length(date_target))
+weekz <- data.frame(week, date_target) 
+
+rm(week)
+```
+
+Get a list of counties with their identifies.
+```{r}
+
+working_d <- getwd()
+working_d <- str_sub(working_d, end = -7)
+yuio <- paste0(working_d, "data/counties_shp2.rds")
+
+dfc <- read_rds(yuio)                        ##use the geoid in this to reference counties
+
+
+
+weather_dir <- "C:/Users/Carey Suehs/Documents/weather/"
+```
+
+Initiate a dataframe by aggregating the first target date. Create a loop to parse the weather data in the first county and bind it to the aggregated data.
+```{r}
+
+
+
+for (i in 279:281){
+
+gid <- dfc$GEOID[i]
+name_of_file <- paste0("GEOID_", gid, ".csv")
+name_of_path <- paste0(weather_dir, name_of_file)
+
+df <- read.csv(name_of_path)
+df$Date.time <- as.character(df$Date.time)
+df$Date.time <- as.Date(df$Date.time, format = "%m/%d/%Y")
+
+####### get means and slopes for the three weeks preceding target dates starting at target date '4'.
+
+j <- 4
+tdate <- weekz$date_target[j]
+start_date <- tdate-21
+date_range <- seq.Date(start_date, tdate, b = "day")
+
+temp <- df[df$Date.time %in% date_range,]
+
+aggregated_weather2 <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature),
+            av_temp_lo <- mean(Minimum.Temperature),
+            av_temp_mean <- mean(Temperature),
+            av_precip <- mean(Precipitation),
+            av_wind_speed <- mean(Wind.Speed),
+            av_cloud_cover <- mean(Cloud.Cover),
+            av_humidity <- mean(Relative.Humidity))
+
+colnames(aggregated_weather2) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+aggregated_weather2$week <- weekz$week[j]
+aggregated_weather2$date_target <- weekz$date_target[j]
+aggregated_weather2$geoid <- gid                   
+
+
+for (j in 5:length(weekz$week)) {
+  tdate <- weekz$date_target[j]
+  start_date <- tdate-21
+  date_range <- seq.Date(start_date, tdate, b = "day")
+
+  temp <- df[df$Date.time %in% date_range,]
+
+  new_row <- temp %>% 
+  summarise(av_temp_hi = mean(Maximum.Temperature),
+            av_temp_lo <- mean(Minimum.Temperature),
+            av_temp_mean <- mean(Temperature),
+            av_precip <- mean(Precipitation),
+            av_wind_speed <- mean(Wind.Speed),
+            av_cloud_cover <- mean(Cloud.Cover),
+            av_humidity <- mean(Relative.Humidity))
+
+  colnames(new_row) <- c("av_temp_hi",
+                                  "av_temp_lo",
+                                  "av_temp_mean",
+                                  "av_precip",
+                                  "av_wind_speed",
+                                  "av_cloud_cover",
+                                  "av_humidity")
+  new_row$week <- weekz$week[j]
+  new_row$date_target <- weekz$date_target[j]
+  new_row$geoid <- gid
+  aggregated_weather2 <- rbind(aggregated_weather2, new_row)
+  name_of_new_file <- paste0("agg_", name_of_file)
+  name_of_new_path <- paste0("C:/Users/Carey Suehs/Documents/weather_aggregated/", name_of_new_file)
+  write.csv(aggregated_weather2, name_of_new_path)
+  
+}
+
+print(i)
+}
+```
+
+
+
+
+
