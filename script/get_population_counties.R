@@ -3,6 +3,8 @@ library(tidyverse)
 library(tidycensus)
 library(censusapi)
 
+library(readxl)
+library(writexl)
 
 
 key <- "982b4bbfc5dd20ae1373fabce29a43fa0d03b2fd"
@@ -14,6 +16,8 @@ data2000 <- censusapi::getCensus(
   region="county:*",
   key=key)
 
+write_csv(data2000,"data/county_census_pop_2000.csv")
+
 data2010 <- censusapi::getCensus(
   name = "dec/sf1",
   vintage = 2010,
@@ -21,6 +25,7 @@ data2010 <- censusapi::getCensus(
   region="county:*",
   key=key)
 
+write_csv(data2010,"data/county_census_pop_2010.csv")
 
 data2015 <- tidycensus::get_estimates(geography = "county",
                           #product = "population",
@@ -28,6 +33,7 @@ data2015 <- tidycensus::get_estimates(geography = "county",
                           key=key,
                           year = 2015) 
 
+write_csv(data2015,"data/county_census_pop_2015.csv")
 
 ## une seule table 
 data2000 <- data2000 %>%
@@ -48,7 +54,11 @@ data_pop <- data_pop %>%
 
 
 ## Ajout de la population au jeu train
-train <- read_xlsx("data/don_train.xlsx")
+#train <- read_xlsx("data/don_train.xlsx")
+
+train <- read_csv("data/semaine_train.csv") %>%
+  mutate(county = ifelse(nchar(county)<5,paste0("0",county),county))
+
 
 
 train_pop <- inner_join(data_pop,train,by=c("GEOID"="county")) %>%
@@ -69,11 +79,17 @@ train_pop <- inner_join(data_pop,train,by=c("GEOID"="county")) %>%
   mutate(pop_year = round(pop_year)) %>%
   select(-c(pop_2015,pop_2000,pop_2010,gadm_10_00,gadm_15_10))
 
+train_pop <- train_pop %>%
+  select(-county,-variable,-NAME)%>%
+  rename(county=GEOID)
+
+write_csv(train_pop,"semaine_train.csv")
 ## Ajout de la population au jeu test
-test <- read_xlsx("data/don_test.xlsx") %>%
+# test <- read_xlsx("data/don_test.xlsx") %>%
+#   mutate(county=ifelse(nchar(county)<5,paste0("0",county),county))
+test <- read_csv("data/semaine_test.csv")  %>% 
   mutate(county=ifelse(nchar(county)<5,paste0("0",county),county))
-  
-writexl::write_xlsx(test,"data/don_test.xlsx")
+
 
 
 test_pop <- inner_join(data_pop,test,by=c("GEOID"="county")) %>%
@@ -88,6 +104,11 @@ test_pop <- inner_join(data_pop,test,by=c("GEOID"="county")) %>%
   mutate(pop_year = round(pop_year)) %>%
   select(-c(pop_2015,pop_2000,pop_2010,gadm_10_00,gadm_15_10))
 
+test_pop <-test_pop%>%
+  select(-county,-variable,-NAME)%>%
+  rename(county=GEOID)
+
+write_csv(test_pop,"data/semaine_test.csv")
 ## SAVE 
 
 
