@@ -1,7 +1,3 @@
-aggregated_weather_273.csv
-
-     - this file (csv 1) contains test weather data (years 2000 to 2010) for 273 counties.  This is just example data that can now be deleted probably.
-
 testset_aggregated_weather_1_853.csv
 
      - this file (csv 1) contains test weather data (years 2000 to 2010) means aggregated over the three weeks preceding the target date for 853 target counties (1 county is an API failure... I haven't figured out why yet).

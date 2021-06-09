@@ -1,0 +1,177 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Manage packages.
+```{r}
+pacman::p_load(tidyverse,
+               factoextra,
+               NbClust,
+               Factoshiny,
+               FactoMineR,
+               corrplot,
+               clustertend,
+               seriation)
+```
+
+Get data.
+```{r}
+train_weather <- read_csv("data/train_aggregated_weather_1_853.csv") %>% select(-1,-2) %>%
+  mutate(annee=str_sub(date_target,1,4),
+         geoid = ifelse(nchar(geoid)<5,paste0("0",geoid),geoid))
+
+data_train <- read_csv("data/semaine_train.csv") 
+  
+magic <- left_join(data_train,train_weather %>% select(-week,-annee),
+                   by = c("county"="geoid",
+                          "date_semaine"="date_target"))
+
+rm(data_train, train_weather)
+```
+Create a random subsample for play, retaining only complete cases.
+```{r}
+ssize <- 2000
+sub_train <- sample_n(magic, ssize)
+sub_train <- sub_train[complete.cases(sub_train),]
+
+colnames(sub_train)
+```
+
+Select variables for clustering
+```{r}
+keep <- c("nb", "area_burned", 
+          "X11_Open_water",
+          "X21_Developed_open_space",
+          "X22_Developed_low_intensity",
+          "X23_Developed_medium_intensity",
+          "X24_Developed_high_intensity",
+          "X31_Barren_land_rock_sand_clay",
+          "X41_Deciduous_forest",
+          "X42_Evergreen_forest",
+          "X43_Mixed_forest",
+          "X52_Shrub_scrub",
+          "X71_Grassland_herbaceous",
+          "X81_Pasture_hay",
+          "X82_Cultivated_crops",
+          "X90_Woody_wetlands",
+          "X95_Emergent_herbaceous_wetlands",
+          "X0_0",
+          "X12_Perennial_ice_snow",
+          "pop_year",
+          "nb_feux_voisins",
+          "nb_feux_voisins_lag",
+          "av_temp_hi",
+          "av_temp_lo",
+          "av_temp_mean",
+          "av_precip",
+          "av_wind_speed",
+          "av_cloud_cover",
+          "av_humidity")
+
+sub_train <- sub_train[,keep]
+
+
+df <- sub_train
+```
+
+
+
+Things to think about for a future clustering function:
+     - dont for get scaling
+     - projected variables (added variables)
+     - multiple imputation versus complete.cases?
+     - for large databases, option to cluster on subsamples and bootstrap confidence intervals for parameters?
+     - try to objectively determine a best number of clusters and then cluster? or just test a range of clusters? perhaps generate a range around the suggested best number?
+     - different types of methods to use for truly unsupervised algorithsm
+          - kmeans on a range of cluster values, and test for which number of clusters best optimizes a quality parameter
+
+First create a centered and reduced version of the data          
+```{r}
+df_scaled <- scale(df)
+```
+
+
+Calculate the hopkin's statistic.
+```{r}
+
+set.seed(789)
+
+hopkin_n <- 300
+if (nrow(df_scaled) < 300) {
+  hopkin_n <- nrow(df_scaled)-1
+}
+
+hopn <- hopkins(df_scaled, n = hopkin_n)
+hopn
+
+
+```
+
+
+
+
+
+
+
+```{r}
+res.pca <- PCA(sub_train)
+
+fviz_eig(res.pca, addlabels = TRUE, ylim = c(0, 50))
+```
+
+```{r}
+var <- get_pca_var(res.pca)
+var
+```
+
+```{r}
+
+corrplot(var$cos2, is.corr=FALSE)
+```
+
+```{r}
+fviz_cos2(res.pca, choice = "var", axes = 1:2)
+```
+
+
+```{r}
+fviz_pca_var(res.pca, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+```
+
+
+
+First let us perform an example of k-means clustering.
+```{r}
+num_clust <- 8
+km.res <- kmeans(sub_train, num_clust)
+
+fviz_cluster(km.res, data = sub_train,
+             ellipse.type = "convex",
+             pallete = "jco",
+             ggthem = theme_minimal())
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
