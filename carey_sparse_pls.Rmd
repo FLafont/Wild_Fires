@@ -1,0 +1,128 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Manage packages.
+```{r}
+pacman::p_load(tidyverse)
+```
+
+Get data.
+```{r}
+train_weather <- read_csv("data/train_aggregated_weather_1_853.csv") %>% select(-1,-2) %>%
+  mutate(annee=str_sub(date_target,1,4),
+         geoid = ifelse(nchar(geoid)<5,paste0("0",geoid),geoid))
+
+data_train <- read_csv("data/semaine_train.csv") 
+  
+magic <- left_join(data_train,train_weather %>% select(-week,-annee),
+                   by = c("county"="geoid",
+                          "date_semaine"="date_target"))
+
+rm(data_train, train_weather)
+```
+Create a random subsample for play, retaining only complete cases.
+```{r}
+ssize <- 5000
+sub_train <- sample_n(magic, ssize)
+sub_train <- sub_train[complete.cases(sub_train),]
+
+colnames(sub_train)
+```
+
+Select variables for the PLS model, and indicate the FIRE variable.
+```{r}
+keep <- c("X11_Open_water",
+          "X21_Developed_open_space",
+          "X22_Developed_low_intensity",
+          "X23_Developed_medium_intensity",
+          "X24_Developed_high_intensity",
+          "X31_Barren_land_rock_sand_clay",
+          "X41_Deciduous_forest",
+          "X42_Evergreen_forest",
+          "X43_Mixed_forest",
+          "X52_Shrub_scrub",
+          "X71_Grassland_herbaceous",
+          "X81_Pasture_hay",
+          "X82_Cultivated_crops",
+          "X90_Woody_wetlands",
+          "X95_Emergent_herbaceous_wetlands",
+          "X0_0",
+          "X12_Perennial_ice_snow",
+          "pop_year",
+          "av_temp_hi",
+          "av_temp_lo",
+          "av_temp_mean",
+          "av_precip",
+          "av_wind_speed",
+          "av_cloud_cover",
+          "av_humidity")
+
+FIRE <- sub_train$FIRE
+sub_train <- sub_train[,keep]
+
+
+```
+
+
+
+Manage packages.
+```{r}
+pacman::p_load(mixOmics)    ###### ATTN. Mixomics fucks up tidyverse. close and reopen studio
+```
+
+
+First create a centered and reduced version of the data          
+```{r}
+df_scaled <- scale(sub_train)
+```
+
+```{r}
+list.keepX <- c(seq(2, 20, 1))
+set.seed(2543)
+tune.splsda <- tune.splsda(X = df_scaled,
+                           Y = FIRE,
+                           ncomp = 2, 
+                           validation = 'Mfold',    ##change to 'loo' for leave one out
+                           progressBar = TRUE, 
+                           dist = 'max.dist',
+                           test.keepX = list.keepX, 
+                           nrepeat = 100) #nrepeat 50-100 for better estimate
+# tune.splsda.srbct  #the various outputs
+
+res2 <- splsda(X = df_scaled,
+               Y = FIRE,
+               ncomp = 2,
+               keepX = tune.splsda$choice.keepX)
+
+plotIndiv(res2)
+```
+
+```{r}
+plotVar(res2)
+```
+```{r}
+res2
+
+```
+
+```{r}
+res2$loadings
+
+```
+
+```{r}
+pred <- predict(res2, sub_train, dist = "max.dist")
+predicted <- pred$class$max.dist[,2]
+confusion.mat = get.confusion_matrix(truth = FIRE, predicted = predicted)
+confusion.mat
+```
+
+
+
+
+
+
+
+
