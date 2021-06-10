@@ -24,7 +24,7 @@ rm(data_train, train_weather)
 ```
 Create a random subsample for play, retaining only complete cases.
 ```{r}
-ssize <- 2000
+ssize <- 5000
 sub_train <- sample_n(magic, ssize)
 sub_train <- sub_train[complete.cases(sub_train),]
 
@@ -112,6 +112,12 @@ res2$loadings
 
 ```
 
+```{r}
+pred <- predict(res2, sub_train, dist = "max.dist")
+predicted <- pred$class$max.dist[,2]
+confusion.mat = get.confusion_matrix(truth = FIRE, predicted = predicted)
+confusion.mat
+```
 
 
 
