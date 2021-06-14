@@ -22,6 +22,7 @@ df <- ca %>%
            X23_Developed_medium_intensity+X24_Developed_high_intensity)%>%
   select(-c(X21_Developed_open_space:X24_Developed_high_intensity,county))
 
+df <- df %>% select(-cause_feu)
 # Création jeu de training et jeu de test 
 # 400 lignes qui partent sur un na.omit
 df <- df %>% na.omit()
@@ -75,8 +76,8 @@ df_pre_processed <- df_recipe %>% prep(train) %>% juice()
 # RANDOM FOREST : On va tuner mtry
 #1. Creation de l'objet model
 rf_model <- rand_forest() %>%
-  set_args(mtry = 4,
-           num.tree =50) %>% 
+  set_args(mtry = tune(),
+           num.tree =100) %>% 
   # select the engine/package that underlies the model
   set_engine("ranger", importance = "impurity") %>%
   set_mode("classification") 
@@ -117,3 +118,33 @@ rf_fit <- rf_workflow %>%
 test_performance <- rf_fit %>% collect_metrics()
 
 test_predictions <- rf_fit %>% collect_predictions()
+
+
+## On va maintenant train sur le Set entier et prédire sur les nouvelles données
+# Données de TEST : 2011-2015
+test_data  <- read_csv("data/magic_test_feature_eng.csv") %>%
+  mutate(FIRE = ifelse(FIRE,"FEU","NON_FEU"),
+         FIRE = as_factor(FIRE))
+
+ca_test <- test_data %>%
+  filter(state=="06")
+
+# Selection des variables d'intérêt
+don_test <- ca_test %>%
+  select(-c(state,date_semaine,nb,area_burned,semaine,annee,
+            nb_feux_main_cause,nb_feux_voisins,X0_0))%>%
+  mutate(XX_Developed = X21_Developed_open_space+X22_Developed_low_intensity+
+           X23_Developed_medium_intensity+X24_Developed_high_intensity)%>%
+  select(-c(X21_Developed_open_space:X24_Developed_high_intensity,county))
+
+don_test <- don_test %>% na.omit() %>%
+  select(-cause_feu)
+
+final_model <- fit(rf_workflow, df)
+resultats <- predict(final_model, new_data = don_test)
+
+resultats_aug <- resultats %>%
+  mutate(Y = don_test$FIRE,
+         bonne_prediction= .pred_class==Y)
+# Erreure de prédiction:
+1-sum(resultats_aug$bonne_prediction)/nrow(resultats_aug)
