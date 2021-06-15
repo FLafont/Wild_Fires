@@ -1,0 +1,366 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Manage packages.
+```{r}
+pacman::p_load(tidyverse, glmnet, gbm, rpart,
+               randomForest, caret, kernlab, pROC)
+```
+
+Get data.
+```{r}
+
+train_weather <- read_csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/train_aggregated_weather_1_853.csv") %>% select(-1,-2) %>%
+  mutate(annee=str_sub(date_target,1,4),
+         geoid = ifelse(nchar(geoid)<5,paste0("0",geoid),geoid))
+
+data_train <- read_csv("data/semaine_train.csv") 
+  
+magic <- left_join(data_train,train_weather %>% select(-week,-annee),
+                   by = c("county"="geoid",
+                          "date_semaine"="date_target"))
+florida <- magic %>% 
+  filter(state == 12)
+
+rm(data_train, train_weather)
+```
+
+Create a dataframe with only those variables that will be entering the model
+```{r}
+
+nokeep <- c("county", 
+            "state", 
+            "date_semaine",
+            "annee",
+            "semaine",
+            "nb",
+            "area_burned",
+            "Debris.Burning",
+            "Arson",
+            "Children",
+            "Campfire" ,
+            "Smoking" ,
+            "Equipment.Use",
+            "Lightning",
+            "Miscellaneous",
+            "Powerline",
+            "Railroad" ,
+            "Fireworks",
+            "Missing.Undefined" ,
+            "Structure",
+            "nb_feux_voisins",
+            "X12_Perennial_ice_snow")
+
+dfmm <- florida[complete.cases(florida),!names(florida) %in% nokeep]    #### complete cases!!!
+
+dfmm$FIRE <- as.numeric(dfmm$FIRE)
+
+colnames(dfmm)[1] <- "Y"    #Make sure the dependent variable is in position '1' and rename as 'Y'.
+
+rm(magic)
+
+#df <- sample_n(dfmm,2000)   ##################reset this will full data after attenmpting small set
+df <- dfmm
+```
+
+
+
+
+
+```{r}
+
+```
+
+
+
+
+
+
+Set up the independent and dependent variables
+```{r}
+xxx <- model.matrix(Y ~ ., df)
+yyy <- df$Y
+```
+
+Set up the cross validation block structure.
+```{r}
+nbloc <- 5
+bloc <- rep(1:nbloc, length=nrow(df))
+set.seed(1234)
+bloc <- sample(bloc)
+length(bloc)
+```
+
+Set up results frame.
+```{r}
+res <- data.frame(yyy, 
+                  logistic=0, 
+                  step=0, 
+                  glmridge=0, 
+                  glmlasso=0,
+                  glmelastic=0,
+                  boosted200=0,
+                  boosted500=0,
+                  cart=0,
+                  randomforest200=0,
+                  randomforest500=0,
+                  svm=0)
+```
+
+
+
+Make a loop that places predicted values for the selected models into the results frame.
+```{r}
+for (i in 1:nbloc){
+  dfA <- df[bloc != i,]
+  XXA <- xxx[bloc != i,]
+  YYA <- yyy[bloc != i]
+  dfT <- df[bloc == i,]
+  XXT <- xxx[bloc == i,]
+  ###################################################################
+  mod_log <- glm(Y~., data=dfA, family = "binomial")
+  res[bloc==i, "logistic"] <- predict(mod_log,dfT, type = "response")
+  print(paste0("logistic_",i))
+  #####
+  mod_step <- step(mod_log, trace=0, direction = "both")
+  res[bloc==i, "step"] <- predict(mod_step, dfT, type = "response")
+  print(paste0("step_",i))
+  #####
+  mod_ridge <- cv.glmnet(x = XXA, y = YYA, alpha=0, family = "binomial")
+  res[bloc==i, "glmridge"] <- as.vector(predict(mod_ridge, newx=XXT, type="response"))
+  print(paste0("ridge_",i))
+  #####
+  mod_lasso <- cv.glmnet(x = XXA, y = YYA, alpha=1, family = "binomial")
+  res[bloc==i, "glmlasso"] <- as.vector(predict(mod_lasso, newx=XXT, type="response"))
+  print(paste0("lasso_",i))
+  #####
+  mod_elastic <- cv.glmnet(x = XXA, y = YYA, alpha=0.5, family = "binomial")
+  res[bloc==i, "glmelastic"] <- as.vector(predict(mod_elastic, newx=XXT, type="response"))
+  print(paste0("elastic_",i))
+  #####
+  #mod_boost200 <- gbm(formula = Y~., data = dfA, distribution = "adaboost",
+            #n.trees = 200, interaction.depth = 2, shrinkage = 0.02) 
+  #res[bloc == i, "boosted200"] <- as.vector(predict(mod_boost200, newdata = dfT, type="response"))
+  #print(paste0("boost200_",i))
+  #####
+  mod_boost500 <- gbm(formula = Y~., data = dfA, distribution = "adaboost",
+            n.trees = 500, interaction.depth = 2, shrinkage = 0.02) 
+  res[bloc == i, "boosted500"] <- as.vector(predict(mod_boost500, newdata = dfT, type="response"))
+  print(paste0("boost500_",i))
+  #####
+  mod_cart <- rpart(formula = Y~., data = dfA)
+  res[bloc == i, "cart"] <- predict(mod_cart, dfT)
+  print(paste0("cart_",i))
+  #####
+  #mod_randomforest200 <- randomForest(formula = Y~., data = dfA, ntree=200)
+  #res[bloc == i, "randomforest200"] <- predict(mod_randomforest200, newdata = dfT, ytype = "prob")
+  #print(paste0("randomforest200_",i))
+  #####
+  mod_randomforest500 <- randomForest(formula = Y~., data = dfA, ntree=500)
+  res[bloc == i, "randomforest500"] <- predict(mod_randomforest500, newdata = dfT, ytype = "prob")
+  print(paste0("randomforest500_",i))
+  #####
+  #trctrl <- trainControl(method = "boot")
+  #dfAA <- dfA
+  #dfAA$Y <- as.factor(dfAA$Y)
+  #dfTT <- dfT
+  #dfTT$Y <- as.factor(dfTT$Y)
+  #mod_svm <- train(Y ~., data = dfAA, method = "svmLinear",
+                # trControl=trctrl,
+                 #preProcess = c("center", "scale"),
+                 #tuneLength = 10)
+  #res[bloc == i, "svm"] <- predict(mod_svm, newdata = dfTT)
+  #print(paste0("svm_",i))
+  #####
+  #####
+  #####
+  #####
+  #####
+  #####
+  print(i)
+}
+
+res$svm <- ifelse(res$svm==1, 0, 1)
+```
+
+
+
+Creat ROC objects from the pROC package.
+```{r}
+
+r1 <- roc(res$yyy, res$logistic)
+r2 <- roc(res$yyy, res$step)
+r3 <- roc(res$yyy, res$glmridge)
+r4 <- roc(res$yyy, res$glmlasso)
+r5 <- roc(res$yyy, res$glmelastic)
+#r6 <- roc(res$yyy, res$boosted200)
+r7 <- roc(res$yyy, res$boosted500)
+r8 <- roc(res$yyy, res$cart)
+#r9 <- roc(res$yyy, res$randomforest200)
+r10 <- roc(res$yyy, res$randomforest500)
+
+
+
+
+
+```
+
+
+
+
+
+```{r}
+modz <- c("logistic",
+          "step",
+          "ridge",
+          "lasso",
+          "elastic",
+          #"boost200",
+          "boost500",
+          "cart",
+          #"randomforest200",
+          "randomforest500")
+auc <- c(auc(r1), 
+         auc(r2),
+         auc(r3),
+         auc(r4),
+         auc(r5),
+         #auc(r6),
+         auc(r7),
+         auc(r8),
+         #auc(r9),
+         auc(r10))
+
+rm(thresh)
+thresh <- rbind (coords(r1, "best", best.method = "c"),
+                 coords(r2, "best", best.method = "c"),
+                 coords(r3, "best", best.method = "c"),
+                 coords(r4, "best", best.method = "c"),
+                 coords(r5, "best", best.method = "c"),
+                 #coords(r6, "best", best.method = "c"),
+                 coords(r7, "best", best.method = "c"),
+                 coords(r8, "best", best.method = "c"),
+                 #coords(r9, "best", best.method = "c"),
+                 coords(r10, "best", best.method = "c"))
+
+res_auc <- data.frame(modz,auc,thresh)
+res_auc
+res_auc$tot <- res_auc$specificity+res_auc$sensitivity
+
+res_auc <- res_auc[order(res_auc$tot),]
+res_auc
+thresh
+```
+
+
+Create a function that returns the error of classification.
+```{r}
+eval_prev_classif <- function(prev_proba,
+                              real,
+                              threshi){
+  prev <- (prev_proba > threshi)*1
+  
+  cm <- table(real,prev)
+  cm_norm <- round(100*cm/sum(cm),digits=1)
+  
+  
+  tp <- cm[2,2]
+  fp <- cm[1,2]
+  tn <- cm[1,1]
+  fn <- cm[2,1]
+
+  error <- (fp+fn)/(tp+tn+fp+fn)
+  
+  #print(cm)
+  #print(cm_norm)
+  #print(paste("Classification error : ",round(error,digits=3),sep=""))
+  
+  round(error,digits=3)*100
+}
+```
+
+
+
+```{r}
+res_auc$classif_error <- NA
+res_auc$classif_error[res_auc$modz == "cart"] <- eval_prev_classif(res$cart, 
+                                                                   res$yyy, 
+                                                                   res_auc$threshold[res_auc$modz == "cart"])
+res_auc$classif_error[res_auc$modz == "ridge"] <- eval_prev_classif(res$glmridge, 
+                                                                   res$yyy, 
+                                                                   res_auc$threshold[res_auc$modz == "ridge"])
+res_auc$classif_error[res_auc$modz == "logistic"] <- eval_prev_classif(res$logistic, 
+                                                                   res$yyy, 
+                                                                   res_auc$threshold[res_auc$modz == "logistic"])
+res_auc$classif_error[res_auc$modz == "step"] <- eval_prev_classif(res$step, 
+                                                                   res$yyy, 
+                                                                   res_auc$threshold[res_auc$modz == "step"])
+res_auc$classif_error[res_auc$modz == "elastic"] <- eval_prev_classif(res$glmelastic, 
+                                                                   res$yyy, 
+                                                                   res_auc$threshold[res_auc$modz == "elastic"])
+res_auc$classif_error[res_auc$modz == "lasso"] <- eval_prev_classif(res$glmlasso, 
+                                                                   res$yyy, 
+                                                                   res_auc$threshold[res_auc$modz == "lasso"])
+#res_auc$classif_error[res_auc$modz == "boost200"] <- eval_prev_classif(res$boosted200, 
+                                                                   #res$yyy, 
+                                                                   #res_auc$threshold[res_auc$modz == #"boost200"])
+res_auc$classif_error[res_auc$modz == "boost500"] <- eval_prev_classif(res$boosted500, 
+                                                                   res$yyy, 
+                                                                   res_auc$threshold[res_auc$modz == "boost500"])
+#res_auc$classif_error[res_auc$modz == "randomforest200"] <- eval_prev_classif(res$randomforest200, 
+                                                                   #res$yyy, 
+                                                                   #res_auc$threshold[res_auc$modz == #"randomforest200"])
+res_auc$classif_error[res_auc$modz == "randomforest500"] <- eval_prev_classif(res$randomforest500, 
+                                                                   res$yyy, 
+                                                                   res_auc$threshold[res_auc$modz == "randomforest500"])
+
+res_auc
+```
+Save the best model locally.
+```{r}
+save(mod_randomforest500, file = "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/florida_randomforest.rda")
+```
+
+
+```{r}
+load("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/florida_randomforest.rda")
+```
+
+```{r}
+pdf(file = "florida_roc.pdf")
+
+plot.roc(res$yyy, 
+                  res$logistic, 
+                  main="Confidence intervals", 
+                  percent=TRUE, 
+                  ci=TRUE, # compute AUC (of AUC by default) 
+                  of="thresholds",
+                  thresholds="best",
+                  print.thres="best",
+                  print.auc=TRUE,# print the AUC (will contain the CI)
+                  legacy.axes = F,
+         xlim=c(100,0)) 
+
+dev.off()
+```
+
+
+```{r}
+ggroc(r1, legacy.axes = T) +
+geom_abline(slope = 1 ,intercept = 0) + # add identity line
+theme(
+panel.background = element_blank(), 
+axis.title.x = element_text(size =18, face = 'bold'),
+axis.title.y = element_text(size =18, face = 'bold'),
+panel.border = element_rect(size = 2, fill = NA), 
+axis.text.x = element_text(size = 14, face ='bold'),
+axis.text.y = element_text(size = 14, face ='bold')) +
+xlab('100% - Specificity') +
+ylab('100% - Sensitivity') +
+scale_x_continuous(breaks = seq(0,1,0.25), labels = seq(0,1,0.25) * 100) + 
+scale_y_continuous(breaks = seq(0,1,0.25), labels = seq(0,1,0.25) * 100)
+```
+
+
