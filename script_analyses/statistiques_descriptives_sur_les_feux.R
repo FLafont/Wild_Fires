@@ -173,8 +173,7 @@ presentation_etat_feux <- function(state_name){
 
 # Des graphiques qui pourraient apparaître sur un onglet du shiny 
 presentation_etat_feux("Mississippi")
-
-
+presentation_etat_feux("Georgia")
 
 
 
