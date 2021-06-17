@@ -1,0 +1,106 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Manage packages.
+```{r}
+pacman::p_load(tidyverse, yaml)
+```
+
+
+Get the test data set
+```{r}
+test_weather <- read_csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/test_aggregated_weather_1_853.csv") %>% select(-1,-2) %>%
+  mutate(annee=str_sub(date_target,1,4),
+         geoid = ifelse(nchar(geoid)<5,paste0("0",geoid),geoid))
+
+data_test <- read_csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/semaine_test.csv") 
+
+magic_test <- left_join(data_test,test_weather %>% select(-week,-annee),
+                        by = c("county"="geoid",
+                               "date_semaine"="date_target"))
+
+write_csv(magic_test,"magic_test.csv")
+```
+
+
+Load the best model for Florida.
+```{r}
+loaded_model <- read_yaml("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/florida_best_1.yml")
+
+loaded_model <- as_parsed_model(loaded_model)
+```
+
+Get the appropriate subset for Florida.
+```{r}
+florida_test <- magic_test %>% 
+  filter(state == 12)
+
+nokeep <- c("county", 
+            "state", 
+            "date_semaine",
+            "annee",
+            "semaine",
+            "nb",
+            "area_burned",
+            "Debris.Burning",
+            "Arson",
+            "Children",
+            "Campfire" ,
+            "Smoking" ,
+            "Equipment.Use",
+            "Lightning",
+            "Miscellaneous",
+            "Powerline",
+            "Railroad" ,
+            "Fireworks",
+            "Missing.Undefined" ,
+            "Structure",
+            "nb_feux_voisins",
+            "X12_Perennial_ice_snow",
+            "X0_0")
+
+dfmm <- florida_test[complete.cases(florida_test),!names(florida_test) %in% nokeep]    #### complete cases!!!
+
+dfmm$FIRE <- as.numeric(dfmm$FIRE)
+
+colnames(dfmm)[1] <- "Y"    #Make sure the dependent variable is in position '1' and rename as 'Y'.
+
+
+
+```
+
+
+
+Get real and predicted values for the test set.
+```{r}
+real_values <- as.numeric(magic_test$FIRE)
+```
+
+
+```{r}
+qsdf <- predict(object = loaded_model, florida_test)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

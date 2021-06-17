@@ -15,7 +15,7 @@ train_weather <- read_csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data
   mutate(annee=str_sub(date_target,1,4),
          geoid = ifelse(nchar(geoid)<5,paste0("0",geoid),geoid))
 
-data_train <- read_csv("data/semaine_train.csv") 
+data_train <- read_csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/semaine_train.csv") 
   
 magic <- left_join(data_train,train_weather %>% select(-week,-annee),
                    by = c("county"="geoid",
@@ -50,7 +50,8 @@ nokeep <- c("county",
             "Missing.Undefined" ,
             "Structure",
             "nb_feux_voisins",
-            "X12_Perennial_ice_snow")
+            "X12_Perennial_ice_snow",
+            "X0_0")
 
 dfmm <- nc[complete.cases(nc),!names(nc) %in% nokeep]    #### complete cases!!!
 
@@ -304,19 +305,9 @@ res_auc$classif_error[res_auc$modz == "randomforest500"] <- eval_prev_classif(re
 
 res_auc
 ```
-Save the best model locally.
-```{r}
-save(mod_randomforest500, file = "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/northcarolina_randomforest.rda")
-```
-
 
 ```{r}
-load("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/northcarolina_randomforest.rda")
-```
 
-
-```{r}
-```{r}
 pdf(file = "northcarolina_roc.pdf")
 
 plot.roc(res$yyy, 
@@ -333,7 +324,87 @@ plot.roc(res$yyy,
 
 dev.off()
 ```
+
+
+
+Get the external test data.
+```{r}
+test_weather <- read_csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/test_aggregated_weather_1_853.csv") %>% select(-1,-2) %>%
+  mutate(annee=str_sub(date_target,1,4),
+         geoid = ifelse(nchar(geoid)<5,paste0("0",geoid),geoid))
+
+data_test <- read_csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/data/semaine_test.csv") 
+
+magic_test <- left_join(data_test,test_weather %>% select(-week,-annee),
+                        by = c("county"="geoid",
+                               "date_semaine"="date_target"))
+
+test_nc <- magic_test %>% 
+  filter(state == 37)
+  
+  
+
+#df_test <- test_florida[complete.cases(test_florida),!names(test_florida) %in% nokeep]    #### #complete cases!!!
+
+df_test <- test_nc[,!names(test_nc) %in% nokeep]
+df_test$FIRE <- as.numeric(df_test$FIRE)
+
+colnames(df_test)[1] <- "Y"    #Make sure the dependent variable is in position '1' and rename as#Y'.
+
+
 ```
+
+```{r}
+df_test$pred <- predict(mod_randomforest500, newdata = df_test, ytype = "prob")
+```
+
+
+```{r}
+r_external_val <- roc(df_test$Y, df_test$pred, na.rm = T)
+auc(r_external_val)
+coords(r_external_val, "best", best.method = "c")
+```
+
+```{r}
+plot.roc(df_test$Y, 
+                  df_test$pred, 
+                  main="Confidence intervals", 
+                  percent=TRUE, 
+                  ci=TRUE, # compute AUC (of AUC by default) 
+                  of="thresholds",
+                  thresholds="best",
+                  print.thres="best",
+                  print.auc=TRUE,# print the AUC (will contain the CI)
+                  legacy.axes = F,
+         xlim=c(100,0)) 
+```
+
+```{r}
+test_nc$pred <- df_test$pred
+
+
+write.csv(test_nc, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/nc_pred.csv")
+```
+
+
+```{r}
+pdf("northcarolina_roc_external.pdf")
+plot.roc(df_test$Y, 
+                  df_test$pred, 
+                  main="Confidence intervals", 
+                  percent=TRUE, 
+                  ci=TRUE, # compute AUC (of AUC by default) 
+                  of="thresholds",
+                  thresholds="best",
+                  print.thres="best",
+                  print.auc=TRUE,# print the AUC (will contain the CI)
+                  legacy.axes = F,
+         xlim=c(100,0)) 
+dev.off()
+```
+
+
+
 
 
 
