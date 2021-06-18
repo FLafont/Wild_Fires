@@ -1,0 +1,362 @@
+NAME_1,NAME_2,fips,fips_state,fips_county
+California,Plumas,06063,6,63
+California,El Dorado,06017,6,17
+California,Alpine,06003,6,3
+California,Amador,06005,6,5
+California,Shasta,06089,6,89
+California,Siskiyou,06093,6,93
+North Carolina,Transylvania,37175,37,175
+North Carolina,Macon,37113,37,113
+North Carolina,Caldwell,37027,37,27
+California,Humboldt,06023,6,23
+California,Los Angeles,06037,6,37
+California,Mono,06051,6,51
+California,Riverside,06065,6,65
+California,Fresno,06019,6,19
+California,Kern,06029,6,29
+California,Ventura,06111,6,111
+California,Monterey,06053,6,53
+California,Tuolumne,06109,6,109
+California,Santa Barbara,06083,6,83
+California,San Luis Obispo,06079,6,79
+California,San Bernardino,06071,6,71
+California,Tulare,06107,6,107
+California,San Diego,06073,6,73
+Florida,Marion,12083,12,83
+California,Lake,06033,6,33
+California,Lassen,06035,6,35
+California,Tehama,06103,6,103
+California,Butte,06007,6,7
+Florida,Wakulla,12129,12,129
+California,Sierra,06091,6,91
+Florida,Leon,12073,12,73
+Florida,Putnam,12107,12,107
+Florida,Lake,12069,12,69
+California,Placer,06061,6,61
+California,Modoc,06049,6,49
+California,Trinity,06105,6,105
+Florida,Columbia,12023,12,23
+Florida,Baker,12003,12,3
+California,Inyo,06027,6,27
+North Carolina,Swain,37173,37,173
+California,Nevada,06057,6,57
+California,Del Norte,06015,6,15
+California,Yuba,06115,6,115
+California,Mendocino,06045,6,45
+California,Glenn,06021,6,21
+California,Mariposa,06043,6,43
+North Carolina,Craven,37049,37,49
+California,Calaveras,06009,6,9
+Florida,Gadsden,12039,12,39
+North Carolina,Burke,37023,37,23
+Georgia,Murray,13213,13,213
+Georgia,Gordon,13129,13,129
+Georgia,Whitfield,13313,13,313
+Georgia,Union,13291,13,291
+Georgia,Greene,13133,13,133
+Georgia,Putnam,13237,13,237
+Georgia,White,13311,13,311
+Georgia,Habersham,13137,13,137
+Georgia,Rabun,13241,13,241
+Georgia,Floyd,13115,13,115
+Florida,Liberty,12077,12,77
+California,Madera,06039,6,39
+North Carolina,Cherokee,37039,37,39
+North Carolina,Jackson,37099,37,99
+North Carolina,Clay,37043,37,43
+Georgia,Chattooga,13055,13,55
+Georgia,Walker,13295,13,295
+Georgia,Fannin,13111,13,111
+Georgia,Lumpkin,13187,13,187
+Georgia,Stephens,13257,13,257
+North Carolina,Buncombe,37021,37,21
+North Carolina,Haywood,37087,37,87
+North Carolina,Yancey,37199,37,199
+North Carolina,McDowell,37111,37,111
+North Carolina,Montgomery,37123,37,123
+North Carolina,Polk,37149,37,149
+Mississippi,Perry,28111,28,111
+Mississippi,Newton,28101,28,101
+Mississippi,Harrison,28047,28,47
+Mississippi,Jackson,28059,28,59
+Mississippi,Forrest,28035,28,35
+Mississippi,Stone,28131,28,131
+Mississippi,George,28039,28,39
+Mississippi,Pearl River,28109,28,109
+Mississippi,Yalobusha,28161,28,161
+Mississippi,Wayne,28153,28,153
+Mississippi,Scott,28123,28,123
+Mississippi,Franklin,28037,28,37
+Mississippi,Wilkinson,28157,28,157
+Mississippi,Amite,28005,28,5
+Mississippi,Greene,28041,28,41
+Mississippi,Jones,28067,28,67
+Mississippi,Smith,28129,28,129
+Mississippi,Lamar,28073,28,73
+Florida,Volusia,12127,12,127
+North Carolina,Randolph,37151,37,151
+Mississippi,Hancock,28045,28,45
+North Carolina,Madison,37115,37,115
+Florida,Polk,12105,12,105
+Florida,Clay,12019,12,19
+Florida,Franklin,12037,12,37
+Georgia,Jasper,13159,13,159
+North Carolina,Henderson,37089,37,89
+Georgia,Gilmer,13123,13,123
+Florida,Duval,12031,12,31
+California,Colusa,06011,6,11
+Georgia,Richmond,13245,13,245
+Mississippi,Tippah,28139,28,139
+Mississippi,Tishomingo,28141,28,141
+Mississippi,Jasper,28061,28,61
+North Carolina,Mitchell,37121,37,121
+North Carolina,Jones,37103,37,103
+Georgia,Baldwin,13009,13,9
+Georgia,Jones,13169,13,169
+Florida,Hamilton,12047,12,47
+Mississippi,Marion,28091,28,91
+California,Santa Clara,06085,6,85
+North Carolina,Onslow,37133,37,133
+Mississippi,Copiah,28029,28,29
+Mississippi,Lincoln,28085,28,85
+Mississippi,Winston,28159,28,159
+Georgia,Dawson,13085,13,85
+Georgia,Banks,13011,13,11
+Georgia,Bartow,13015,13,15
+Georgia,Burke,13033,13,33
+Florida,Broward,12011,12,11
+Florida,Hendry,12051,12,51
+Florida,Glades,12043,12,43
+Florida,Collier,12021,12,21
+Florida,Palm Beach,12099,12,99
+Mississippi,Neshoba,28099,28,99
+Mississippi,Leake,28079,28,79
+Mississippi,Madison,28089,28,89
+California,Imperial,06025,6,25
+California,Stanislaus,06099,6,99
+California,Alameda,06001,6,1
+California,San Benito,06069,6,69
+California,Merced,06047,6,47
+California,Contra Costa,06013,6,13
+California,Sacramento,06067,6,67
+California,Santa Cruz,06087,6,87
+California,Yolo,06113,6,113
+California,Solano,06095,6,95
+California,Sonoma,06097,6,97
+California,Napa,06055,6,55
+Florida,Miami-Dade,12086,12,86
+Florida,St Johns,12109,12,109
+Florida,Brevard,12009,12,9
+Florida,Escambia,12033,12,33
+Florida,Santa Rosa,12113,12,113
+Georgia,Macon,13193,13,193
+Georgia,Catoosa,13047,13,47
+Georgia,Camden,13039,13,39
+Georgia,Bibb,13021,13,21
+Mississippi,Lee,28081,28,81
+Mississippi,Attala,28007,28,7
+Mississippi,Hinds,28049,28,49
+Mississippi,Prentiss,28117,28,117
+Mississippi,Itawamba,28057,28,57
+Mississippi,Lauderdale,28075,28,75
+North Carolina,Surry,37171,37,171
+North Carolina,Watauga,37189,37,189
+North Carolina,Dare,37055,37,55
+Florida,Levy,12075,12,75
+Georgia,Charlton,13049,13,49
+Georgia,Clinch,13065,13,65
+Georgia,Ware,13299,13,299
+Georgia,Twiggs,13289,13,289
+Mississippi,Tallahatchie,28135,28,135
+North Carolina,Currituck,37053,37,53
+Florida,Highlands,12055,12,55
+Florida,Dixie,12029,12,29
+Georgia,McIntosh,13191,13,191
+North Carolina,Washington,37187,37,187
+California,San Joaquin,06077,6,77
+Florida,Lee,12071,12,71
+North Carolina,Bertie,37015,37,15
+North Carolina,Gates,37073,37,73
+Florida,Martin,12085,12,85
+North Carolina,Anson,37007,37,7
+Florida,Indian River,12061,12,61
+Florida,Orange,12095,12,95
+Florida,Taylor,12123,12,123
+Georgia,Pierce,13229,13,229
+Mississippi,Holmes,28051,28,51
+North Carolina,Richmond,37153,37,153
+Georgia,Lanier,13173,13,173
+Florida,Okaloosa,12091,12,91
+Florida,Washington,12133,12,133
+Florida,Calhoun,12013,12,13
+Florida,Jackson,12063,12,63
+Florida,Walton,12131,12,131
+Florida,Bay,12005,12,5
+Florida,Holmes,12059,12,59
+Florida,Madison,12079,12,79
+Florida,Suwannee,12121,12,121
+Florida,Nassau,12089,12,89
+Florida,Alachua,12001,12,1
+Florida,Gilchrist,12041,12,41
+Florida,Flagler,12035,12,35
+Florida,Pasco,12101,12,101
+Florida,Citrus,12017,12,17
+Florida,Sumter,12119,12,119
+Florida,Hernando,12053,12,53
+Florida,Osceola,12097,12,97
+Florida,Hillsborough,12057,12,57
+Florida,Charlotte,12015,12,15
+Florida,Sarasota,12115,12,115
+Florida,Manatee,12081,12,81
+Florida,De Soto,12027,12,27
+Florida,Okeechobee,12093,12,93
+Florida,St Lucie,12111,12,111
+Georgia,Mitchell,13205,13,205
+Georgia,Marion,13197,13,197
+Georgia,Crisp,13081,13,81
+Georgia,Dooly,13093,13,93
+Georgia,Harris,13145,13,145
+Georgia,Lee,13177,13,177
+Georgia,Randolph,13243,13,243
+Georgia,Schley,13249,13,249
+Georgia,Stewart,13259,13,259
+Georgia,Sumter,13261,13,261
+Georgia,Talbot,13263,13,263
+Georgia,Taylor,13269,13,269
+Georgia,Webster,13307,13,307
+Georgia,Elbert,13105,13,105
+Georgia,Hall,13139,13,139
+Georgia,Madison,13195,13,195
+Georgia,Walton,13297,13,297
+Georgia,Thomas,13275,13,275
+Georgia,Newton,13217,13,217
+Georgia,Oglethorpe,13221,13,221
+Georgia,Baker,13007,13,7
+Georgia,Calhoun,13037,13,37
+Georgia,Dougherty,13095,13,95
+Georgia,Colquitt,13071,13,71
+Georgia,Brooks,13027,13,27
+Georgia,Decatur,13087,13,87
+Georgia,Seminole,13253,13,253
+Georgia,Miller,13201,13,201
+Georgia,Early,13099,13,99
+Georgia,Grady,13131,13,131
+Georgia,Franklin,13119,13,119
+Georgia,Irwin,13155,13,155
+Georgia,Bleckley,13023,13,23
+Georgia,Pulaski,13235,13,235
+Georgia,Dodge,13091,13,91
+Georgia,Telfair,13271,13,271
+Georgia,Houston,13153,13,153
+Georgia,Laurens,13175,13,175
+Georgia,Wilkinson,13319,13,319
+Georgia,Coffee,13069,13,69
+Georgia,Montgomery,13209,13,209
+Georgia,Toombs,13279,13,279
+Georgia,Treutlen,13283,13,283
+Georgia,Wheeler,13309,13,309
+Georgia,Wilcox,13315,13,315
+Georgia,Jefferson,13163,13,163
+Georgia,Hancock,13141,13,141
+Georgia,Crawford,13079,13,79
+Georgia,Johnson,13167,13,167
+Georgia,Monroe,13207,13,207
+Georgia,Butts,13035,13,35
+Georgia,Peach,13225,13,225
+Georgia,Washington,13303,13,303
+Georgia,Carroll,13045,13,45
+Georgia,Coweta,13077,13,77
+Georgia,Heard,13149,13,149
+Georgia,Troup,13285,13,285
+Georgia,Spalding,13255,13,255
+Georgia,Meriwether,13199,13,199
+Georgia,Upson,13293,13,293
+Georgia,Polk,13233,13,233
+Georgia,Dade,13083,13,83
+Georgia,Haralson,13143,13,143
+Georgia,Paulding,13223,13,223
+Georgia,Bryan,13029,13,29
+Georgia,Evans,13109,13,109
+Georgia,Bulloch,13031,13,31
+Georgia,Long,13183,13,183
+Georgia,Candler,13043,13,43
+Georgia,Effingham,13103,13,103
+Georgia,Emanuel,13107,13,107
+Georgia,Appling,13001,13,1
+Georgia,Tattnall,13267,13,267
+Georgia,Jenkins,13165,13,165
+Georgia,Liberty,13179,13,179
+Georgia,Screven,13251,13,251
+Georgia,Ben Hill,13017,13,17
+Georgia,Cook,13075,13,75
+Georgia,Berrien,13019,13,19
+Georgia,Worth,13321,13,321
+Georgia,Tift,13277,13,277
+Georgia,Lowndes,13185,13,185
+Georgia,Echols,13101,13,101
+Georgia,Atkinson,13003,13,3
+Georgia,Turner,13287,13,287
+Georgia,Columbia,13073,13,73
+Georgia,Glascock,13125,13,125
+Georgia,McDuffie,13189,13,189
+Georgia,Warren,13301,13,301
+Georgia,Wilkes,13317,13,317
+Georgia,Jeff Davis,13161,13,161
+Georgia,Bacon,13005,13,5
+Georgia,Brantley,13025,13,25
+Georgia,Wayne,13305,13,305
+Georgia,Glynn,13127,13,127
+North Carolina,Bladen,37017,37,17
+North Carolina,Hoke,37093,37,93
+North Carolina,Robeson,37155,37,155
+North Carolina,Warren,37185,37,185
+North Carolina,Orange,37135,37,135
+North Carolina,Alexander,37003,37,3
+North Carolina,Halifax,37083,37,83
+North Carolina,Brunswick,37019,37,19
+North Carolina,Duplin,37061,37,61
+North Carolina,Sampson,37163,37,163
+North Carolina,Cleveland,37045,37,45
+North Carolina,Stanly,37167,37,167
+North Carolina,Mecklenburg,37119,37,119
+North Carolina,Catawba,37035,37,35
+North Carolina,Pender,37141,37,141
+North Carolina,Iredell,37097,37,97
+North Carolina,Lincoln,37109,37,109
+North Carolina,Chatham,37037,37,37
+North Carolina,Lee,37105,37,105
+North Carolina,Gaston,37071,37,71
+North Carolina,Columbus,37047,37,47
+North Carolina,Cumberland,37051,37,51
+North Carolina,Harnett,37085,37,85
+North Carolina,Davidson,37057,37,57
+North Carolina,Davie,37059,37,59
+North Carolina,Durham,37063,37,63
+North Carolina,Forsyth,37067,37,67
+North Carolina,Stokes,37169,37,169
+North Carolina,Franklin,37069,37,69
+North Carolina,Hertford,37091,37,91
+North Carolina,Greene,37079,37,79
+North Carolina,Wilson,37195,37,195
+North Carolina,Yadkin,37197,37,197
+North Carolina,Rockingham,37157,37,157
+North Carolina,Rowan,37159,37,159
+North Carolina,Johnston,37101,37,101
+North Carolina,Wayne,37191,37,191
+North Carolina,Moore,37125,37,125
+North Carolina,Martin,37117,37,117
+North Carolina,New Hanover,37129,37,129
+North Carolina,Scotland,37165,37,165
+North Carolina,Union,37179,37,179
+North Carolina,Vance,37181,37,181
+Mississippi,Simpson,28127,28,127
+Mississippi,Kemper,28069,28,69
+Mississippi,Alcorn,28003,28,3
+Mississippi,Monroe,28095,28,95
+Mississippi,Carroll,28015,28,15
+Mississippi,Clarke,28023,28,23
+Mississippi,Covington,28031,28,31
+Mississippi,Jefferson Davis,28065,28,65
+Mississippi,Pike,28113,28,113
+Mississippi,Walthall,28147,28,147
+Mississippi,Lawrence,28077,28,77
