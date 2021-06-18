@@ -19,7 +19,7 @@ library(sf)
 states <- st_read("data/sf_selected_states.shp") 
 don <- read_csv("data/table_clustering_magic_train.csv")
 fires_per_year_state <- read_csv("data/fires_per_year_state.csv")
-
+df <-  read_csv("data/df_desc.csv")
 
 plot_var_state <- function(state_name,var){
   
@@ -41,9 +41,6 @@ plot_var_state <- function(state_name,var){
     theme(plot.title = element_text(size=12,hjust = .5))
   
 }
-
-#plot_var_state("CA",var=number_of_fires)
-plot_surf_brulee_totale_CA <- plot_var_state("California",var=number_of_ha_burned)
 
 
 # PLOT DES CAUSES 
@@ -69,7 +66,7 @@ plot_main_cause <- function(state_name){
   
 }
 
-plot_cause_principale_CA <- plot_main_cause("California")
+
 
 
 ### Plots par catégories de tailles de feux 
