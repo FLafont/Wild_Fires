@@ -155,18 +155,3 @@ factpal <- colorFactor(topo.colors(2), states$etats_selec)
 
 
 ##########################################################
-etats_selec <- don %>% mutate(state = str_sub(county,1,2))%>%
-  group_by(state)%>%
-  count()%>%
-  arrange(desc(n)) %>%
-  head(5)
-
-states <- states %>%
-  mutate(etats_selec = ifelse(STATEFP %in%  etats_selec$state,
-                              "Etats sélectionnés","Autre"),
-         etats_selec = as_factor(etats_selec))
-
-states <- st_transform(states,crs = "+proj=longlat +datum=WGS84")
-
-# creating colors
-factpal <- colorFactor(topo.colors(2), states$etats_selec)
