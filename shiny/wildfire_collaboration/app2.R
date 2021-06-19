@@ -60,30 +60,14 @@ ui <- fluidPage(theme = shinytheme("lumen"),
                                      fluidRow(column(3, verbatimTextOutput("value")))),
                               
                               column(width=8,
-                                     h4 ("Graphiques"),
+                                     h4 (""),
                                      plotOutput("histo")),
                               
                               column(width=2)
                               
                             )
                             ),
-                  
-                  # tabPanel("Descriptions des états",
-                  #          
-                  #          fluidRow(
-                  #            column(width=3,
-                  #                   h4 ("Informations sur les Etats"),
-                  #                   selectInput(inputId = "state",
-                  #                               label = h4("Choose a state :"), 
-                  #                               choices = c("California","Florida", "Georgia", "Mississippi","North Carolina")),
-                  #                   uiOutput("state"),
-                  #                   hr(),
-                  #                   fluidRow(column(3, verbatimTextOutput("value")))),
-                  #            
-                  #            column(width=9,
-                  #                   h4 ("Graphiques"),
-                  #                   plotOutput("histo")
-                  #            ))),
+                
                   
                   tabPanel("Description des comtés",
                            
@@ -108,22 +92,9 @@ ui <- fluidPage(theme = shinytheme("lumen"),
                            ),
                            
                            fluidRow(
-                             #   column(width = 3,
-                             #          selectInput("State",
-                             #                      "Choose a State:",
-                             #                      choices = state_names),
-                             #          uiOutput("state_name"),
-                             #          selectInput(inputId="county",
-                             #                      label=h4("Choose a county :"),
-                             #                      choices=NULL),
-                             #          sliderInput(inputId = "year",
-                             #                      label = h4("Choose a year:"),
-                             #                      value = 2014,
-                             #                      min = 2013, 
-                             #                      max = 2015,sep="")),
                              
                              column(width=12,
-                                    h4("Graphiques"),
+                                    h4("Eléments liés aux risques de feu"),
                                     plotOutput("meteo")
                              )
                            )),
@@ -198,9 +169,7 @@ server <- function(input, output,session) {
   ####Onglet stats Etats
   
   stateInput <- reactive(input$state)
-  
-  
-  
+ 
   output$histo <- renderPlot({
     state <- stateInput()
     presentation_etat_feux(state_name = state)})
@@ -241,7 +210,7 @@ server <- function(input, output,session) {
   
   # Carte county
   output$countymap <- renderLeaflet({
-    map_county_selec(state_name = state <- input$State,
+    map_county_selec(state_name = input$State,
                      county_name =input$county )
   })
   
