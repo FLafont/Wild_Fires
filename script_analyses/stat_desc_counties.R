@@ -158,7 +158,8 @@ counties_meteo <- counties_meteo %>%
     couv_nuageuse_moyenne = mean(av_cloud_cover),
     humidite_moyenne = mean(av_humidity)
   )
-  
+
+
 ## plot meteo counties
 plot_meteo_counties <- function(year,fips,var){
   variable <- ensym(var)
@@ -187,3 +188,51 @@ plot_meteo_counties2 <- function(year,fips,var){
 }
 plot_meteo_counties2("2014","06001",temp_moyenne)
 
+
+## Plusieurs lignes sur un graphique 
+counties_meteo_long <- counties_meteo %>%
+  pivot_longer(c(max_temp:temp_moyenne),
+               names_to = "temperature",
+               values_to = "degré") %>%
+  pivot_longer(c(precip_moyenne:humidite_moyenne),
+               names_to = "indicateurs_humidite",
+               values_to = "valeur") %>%
+  mutate(temperature = recode(temperature,
+                "max_temp"="Température maximale",
+                "min_temp" = "Température minimale",
+                "temp_moyenne"="Température moyenne"),
+         indicateurs_humidite = recode(indicateurs_humidite,
+                                       "precip_moyenne"="Précipitations moyennes",
+                                       "couv_nuageuse_moyenne"="Couverture nuageuse moyenne",
+                                       "humidite_moyenne"="Humidité "))
+
+plot_temperature_counties <- function(year,fips){
+
+  counties_meteo_long %>%
+    filter(annee==year,
+           county==fips)%>%
+    ggplot(aes(x=mois2,y=degré,group=temperature,color=temperature))+
+    geom_line()+
+    geom_point(aes(shape=temperature))+
+    theme_light()+
+    labs(y="degrés (C°)",x="",color="",shape="")
+  
+}
+plot_temperature_counties("2014","06001")
+
+# Le dernier n'est pas bon probablement car pas la même unité 
+## pour les précipitations
+
+plot_humidite_counties <- function(year,fips){
+  
+  counties_meteo_long %>%
+    filter(annee==year,
+           county==fips)%>%
+    ggplot(aes(x=mois2,y=valeur,group=indicateurs_humidite,color=indicateurs_humidite))+
+    geom_line()+
+    geom_point(aes(shape=indicateurs_humidite))+
+    theme_light()+
+    labs(y="degrés (C°)",x="",color="",shape="")
+  
+}
+plot_humidite_counties("2014","06001")
