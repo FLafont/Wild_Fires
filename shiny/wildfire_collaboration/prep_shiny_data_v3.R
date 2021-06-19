@@ -120,6 +120,41 @@ presentation_etat_feux <- function(state_name){
   
 }
 
+
+#### DONNEES POUR CARTE LEAFLET 
+etats_selectionnes <- don %>% mutate(state = str_sub(county,1,2))%>%
+  group_by(state)%>%
+  count()%>%
+  arrange(desc(n)) %>%
+  head(5)
+
+states <- states %>%
+  mutate(etats_selec = ifelse(STATEFP %in%  etats_selectionnes$state,
+                              "Etats sélectionnés","Autre"),
+         etats_selec = as_factor(etats_selec))
+
+states <- st_transform(states,crs = "+proj=longlat +datum=WGS84") 
+# stat sur les feux
+fires_state_over_period <- fires_per_year_state %>%
+  group_by(NAME_1)%>%
+  summarise(number_of_fires = sum(number_of_fires),
+            number_of_ha_burned = sum(number_of_ha_burned))
+
+centers <- st_point_on_surface(states)%>%
+  filter(STATEFP %in% etats_selectionnes$state) %>%
+  select(-etats_selec) %>%
+  rename(state=STATEFP) %>%
+  inner_join(etats_selectionnes) %>%
+  inner_join(fires_state_over_period,by=c("NAME"="NAME_1"))
+
+# creating colors
+factpal <- colorFactor(topo.colors(2), states$etats_selec)
+
+
+
+
+
+##########################################################
 etats_selec <- don %>% mutate(state = str_sub(county,1,2))%>%
   group_by(state)%>%
   count()%>%
