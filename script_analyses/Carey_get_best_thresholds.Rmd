@@ -1,0 +1,79 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Manage packages.
+```{r}
+pacman::p_load(pROC)
+```
+
+
+```{r}
+df_georgia <- read.csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/georgia_pred.csv")
+df_mississippi <- read.csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/mississippi_pred.csv")
+
+df_florida <- read.csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/florida_pred.csv")
+df_northcarolina <- read.csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/nc_pred.csv")
+df_california <- read.csv("C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/models/california_pred.csv")
+```
+
+Prepare dataframe.
+```{r}
+threshy <- data.frame(stat = as.character(),
+                      threshi = as.numeric())
+```
+
+
+Get best threshold for georgia.
+```{r}
+r_gg <- roc(df_georgia$FIRE, df_georgia$pred, na.rm = T)
+auc(r_gg)
+threshy[1,2] <- coords(r_gg, "best", best.method = "c")[1]
+threshy[1,1] <- "georgia"
+```
+
+Get best threshold for mississippi.
+```{r}
+r_ms <- roc(df_mississippi$FIRE, df_mississippi$pred, na.rm = T)
+auc(r_ms)
+threshy[2,2] <- coords(r_ms, "best", best.method = "c")[1]
+threshy[2,1] <- "mississippi"
+```
+
+Get best threshold for florida.
+```{r}
+r_fl <- roc(df_florida$FIRE, df_florida$pred, na.rm = T)
+auc(r_fl)
+threshy[3,2] <- coords(r_fl, "best", best.method = "c")[1]
+threshy[3,1] <- "florida"
+```
+
+Get best threshold for north carolina.
+```{r}
+r_nc <- roc(df_northcarolina$FIRE, df_northcarolina$pred, na.rm = T)
+auc(r_nc)
+threshy[4,2] <- coords(r_nc, "best", best.method = "c")[1]
+threshy[4,1] <- "northcarolina"
+```
+
+
+Get best threshold for california.
+```{r}
+r_cf <- roc(df_california$FIRE, df_california$pred, na.rm = T)
+auc(r_cf)
+threshy[5,2] <- coords(r_cf, "best", best.method = "c")[1]
+threshy[5,1] <- "california"
+```
+
+
+```{r}
+write.csv(threshy, "C:/Users/Carey Suehs/Documents/GitHub/Wild_Fires/shiny/wildfire_collaboration/threshy.csv")
+```
+
+
+
+
+
+
+
