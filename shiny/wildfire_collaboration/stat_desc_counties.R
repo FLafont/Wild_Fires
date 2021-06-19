@@ -40,7 +40,7 @@ plot_meteo_counties <- function(state,year,name_county,var){
     geom_line(color="grey",size=2)+
     geom_point(color="blue")+
     theme_light()+
-    labs(y="degrÃ©s (CÂ°)",x="")
+    labs(y="degés (C°)",x="")
     
 }
 
@@ -64,8 +64,8 @@ plot_counties <- function(state,year,name_county){
   #          pull(fips)
   p1 <- pie_chart_lc(state,name_county,ifelse(year<2015,2010,2015))
   p2 <- plot_meteo_counties(state,year, name_county,var = temp_moyenne)
-  p3 <- plot_meteo_counties2(state,year, name_county,var = humidite_moyenne,"humiditÃ© (g/m^3)")
-  p4 <- plot_meteo_counties2(state,year, name_county,var = precip_moyenne,"prÃ©cipitations (mm)")
+  p3 <- plot_meteo_counties2(state,year, name_county,var = humidite_moyenne,"humiditée (g/m^3)")
+  p4 <- plot_meteo_counties2(state,year, name_county,var = precip_moyenne,"précipitations (mm)")
   
   plot <-  ggarrange(p1,p2,
                      p3,p4,
@@ -77,4 +77,21 @@ plot_counties <- function(state,year,name_county){
 }
 
 
+## CARTRE COUNTIES 
+# map_county_selec <- function(state_name,county_name){
+#   tigris::counties(state="California") %>%
+#     filter(NAME=="Plumas") %>%
+#     ggplot()+geom_sf()
+# }
+map_county_selec <- function(state_name,county_name){
+  x <- tigris::counties(state=state_name) %>%
+    filter(NAME==county_name) %>%
+    st_transform(crs='+proj=longlat +datum=WGS84')
+  
+  leaflet(x) %>% 
+    addTiles()%>%
+    addPolygons(
+      stroke = FALSE,
+      label =   ~NAME)
+}
 
