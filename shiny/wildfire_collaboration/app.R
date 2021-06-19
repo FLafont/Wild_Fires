@@ -166,8 +166,9 @@ server <- function(input, output,session) {
   output$meteo <- renderPlot({
   #   fips <- countyInput()
      name_county <- input$county
+     state <- input$State
      year <- yearInput()
-     plot_counties(year,name_county)
+     plot_counties(state,year,name_county)
     
   })
   
