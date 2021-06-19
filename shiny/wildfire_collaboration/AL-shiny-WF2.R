@@ -9,6 +9,9 @@ library(mapdata)
 library(ggplot2)
 library(ggthemes)
 library(mapproj)
+library(readxl)
+
+source("prep_shiny_data_v3.R",encoding = "utf-8")
 
 qsdf <- county.fips %>% 
   mutate(fips = ifelse(nchar(fips) == 4, paste0(0,fips), fips))
@@ -36,18 +39,21 @@ ui <- fluidPage(theme = shinytheme("lumen"),
                             p()),
                   tabPanel("Statistiques Descriptives",
                            
-                           sidebarPanel(h4 ("Informations sur les Etats"),
-                           selectInput(inputId = "state",
+                           fluidRow(
+                           column(width=3,
+                                  h4 ("Informations sur les Etats"),
+                                  selectInput(inputId = "state",
                                        label = h4("Choose a state :"), 
                                        choices = c("California","Florida", "Georgia", "Mississippi","North Carolina")),
                            uiOutput("state"),
                            hr(),
                            fluidRow(column(3, verbatimTextOutput("value")))),
                            
-                           mainPanel(
+                           column(width=9,
                              h4 ("Graphiques"),
                              plotOutput("histo")
-                           )),
+                           ))),
+                 
                            
                   tabPanel("Prévisions",
                            sidebarLayout(
@@ -103,7 +109,7 @@ server <- function(input, output) {
           #smoothFactor = 0.2, fillOpacity = 1,
           color = ~factpal(etats_selec))
   })
-  
+ 
   staate <- reactive(as.character(input$staate))
   Staate <- reactive({str_to_title(input$staate)})
   yearz <- reactive({input$yearz})

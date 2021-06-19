@@ -6,6 +6,7 @@ library(leaflet)
 #library(maps)
 library(tidyverse)
 library(sf)
+library(ggpubr)
 
 # 
 # 
@@ -16,10 +17,10 @@ library(sf)
 #  
 # st_write(states,"data/sf_selected_states.shp") 
 
-states <- st_read("data/sf_selected_states.shp") 
-don <- read_csv("data/table_clustering_magic_train.csv")
-fires_per_year_state <- read_csv("data/fires_per_year_state.csv")
-df <-  read_csv("data/df_desc.csv")
+states <- st_read("sf_selected_states.shp") 
+don <- read_csv("table_clustering_magic_train.csv")
+fires_per_year_state <- read_csv("fires_per_year_state.csv")
+df <-  read_csv("df_desc.csv")
 
 plot_var_state <- function(state_name,var){
   
@@ -98,15 +99,6 @@ plots_classe_feux <- function(state_name,var){
     theme(plot.title = element_text(size=12,hjust = .5))
 }
 
-
-### Essai plusieurs grapphiques d'un coup pour un état 
-library(ggpubr)
-ggarrange(plot_surf_brulee_totale_CA, 
-          plot_nb_feux_classe_CA, 
-          plot_mean_size_classe_CA,
-          plot_cause_principale_CA,
-          #labels = c("A", "B", "C"),
-          ncol = 2, nrow = 2)
 
 
 ############## FONCTION POUR CES 4 GRAPHIQUES DE PRSENTATION PAR ETAT ####
