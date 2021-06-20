@@ -17,8 +17,21 @@ library(ggpubr)
 #  
 # st_write(states,"data/sf_selected_states.shp") 
 
+
 states <- st_read("sf_selected_states.shp") 
 don <- read_csv("table_clustering_magic_train.csv")
+
+# counties <- tigris::counties(state = c("North Carolina","Florida","Georgia","California","Mississippi"))
+# counties <- counties %>% filter(GEOID %in% don$county)
+counties <- st_read("selected_counties.shp") %>%
+  mutate(NAME_1 = case_when(
+    STATEFP =="06"~"California",
+    STATEFP =="12"~"Florida",
+    STATEFP =="13"~"Georgia",
+    STATEFP =="28"~"Mississippi",
+    STATEFP == "37"~"North Carolina"
+  ))
+
 fires_per_year_state <- read_csv("fires_per_year_state.csv")
 df <-  read_csv("df_desc.csv")
 

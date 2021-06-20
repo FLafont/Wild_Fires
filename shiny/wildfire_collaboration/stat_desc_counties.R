@@ -83,9 +83,23 @@ plot_counties <- function(state,year,name_county){
 #     filter(NAME=="Plumas") %>%
 #     ggplot()+geom_sf()
 # }
+# map_county_selec <- function(state_name,county_name){
+#   x <- tigris::counties(state=state_name) %>%
+#     filter(NAME==county_name) %>%
+#     st_transform(crs='+proj=longlat +datum=WGS84')
+#   
+#   leaflet(x) %>% 
+#     addTiles()%>%
+#     addPolygons(
+#       stroke = FALSE,
+#       label =   ~NAME)
+# }
+
 map_county_selec <- function(state_name,county_name){
-  x <- tigris::counties(state=state_name) %>%
-    filter(NAME==county_name) %>%
+  x <- counties %>%
+    filter(NAME_1==state_name,
+           NAME==county_name) %>%
+    #filter(NAME==county_name) %>%
     st_transform(crs='+proj=longlat +datum=WGS84')
   
   leaflet(x) %>% 
